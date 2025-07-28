@@ -1,70 +1,78 @@
-[![Generic badge](https://img.shields.io/badge/Library-Pytorch-<>.svg)](https://shields.io/) [![Ask Me Anything !](https://img.shields.io/badge/Official%20-No-1abc9c.svg)](https://GitHub.com/Naereen/ama) ![visitors](https://visitor-badge.laobi.icu/badge?page_id=RonyAbecidan.noiseprint-pytorch)
+# NoisePrint PyTorch
 
-Who has never met a forged picture on the web ? No one ! Everyday we are constantly facing fake pictures but it is not always easy to detect it.
+This repository contains a PyTorch implementation of **NoisePrint**, an image forensics technique used to extract the sensor noise fingerprint of a camera model. Pretrained weights are provided and also exported to the ONNX format so that they can be executed in other environments such as .NET.
 
-In this repo, you will find an implementation of Noiseprint, a CNN-based camera model fingerprint. 
+## ONNX models
 
-With this algorithm, you may find if an image has been falsified and even identify suspicious regions. A little example is displayed below.
-
-![](https://i.imgur.com/7Y7a4YD.png)
-
-
-It's a faifthful replica of the [official implementation](https://github.com/grip-unina/noiseprint/) using however the library Pytorch. To learn more about this network, I suggest you to read the paper that describes it [here](https://arxiv.org/pdf/1808.08396.pdf).
-
-On top of Noiseprint, there is also several files containing pre-trained weights obtained by the authors which is compatible with this pytorch version.
-
-Please note that the rest of the README is largely inspired by the original repo.
-
---- 
-
-## Abstract
-
-Forensic analyses of digital images rely heavily on the traces of in-camera and out-camera processes left on the acquired images. Such traces represent a sort of camera fingerprint. If one is able to recover them, by suppressing the high-level scene content and other disturbances, a number of forensic tasks can be easily accomplished. A notable example is the PRNU pattern, which can be regarded as a device fingerprint, and has received great attention in multimedia forensics. In this paper we propose a method to extract a camera model fingerprint, called noiseprint, where the scene content is largely suppressed and model-related artifacts are enhanced. This is obtained by means of a Siamese network, which is trained with pairs of image patches coming from the same (label +1) or different (label −1) cameras. Although noiseprints can be used for a large variety of forensic tasks, here we focus on image forgery localization. Experiments on several datasets widespread in the forensic community show noiseprint-based methods to provide state-of-the-art performance.
-
-## License
-Copyright (c) 2019 Image Processing Research Group of University Federico II of Naples ('GRIP-UNINA').
-
-All rights reserved.
-
-This software should be used, reproduced and modified only for informational and nonprofit purposes.
-
-By downloading and/or using any of these files, you implicitly agree to all the terms of the license, as specified in the document LICENSE.txt (included in this package)
-
-## Where are the pre-trained weights coming from  ?
-
-- Using images from a range of camera devices, the authors pre-trained their model across Quality Factors from 51 to 100, and they extended their training to encompass png images as well. As per the original repository's authors, the weights for the png images are refered to 'qf101' within the weight folder.
-
-**_The pre-trained weights available in this repo are the results of these trainings achieved by the authors_**
-
-**Remarks** : To train Noiseprint you need your own (relevant) datasets.
-
-## Dependency
-- **Python** >= 3.12
-- **Pytorch** >= 2.7
-
-## ONNX weights
-All pretrained weights are also exported to the ONNX format. If you update the
-weights or add new ones you can regenerate the ONNX files running
+The ONNX versions of the pretrained models are stored in the `onnx_models` directory. If you update the weights you can regenerate the models with:
 
 ```bash
 python convert_to_onnx.py
 ```
 
-The resulting models are stored in the `onnx_models/` directory and can be
-loaded with any ONNX compatible runtime.
+The script `test_onnx.py` evaluates all the ONNX models on the sample images found in `examples`. It automatically estimates the image Quality Factor (QF) and chooses the appropriate model. A typical run on CPU looks as follows:
 
-## Demo
-One may simply download the repo and play with the provided ipython notebook.
+```
+NC2016_2564.jpeg: QF=99 output=(1, 1, 64, 64) time=0.022s
+faceswap.jpeg: QF=95 output=(1, 1, 64, 64) time=0.018s
+inpainting.png: QF=101 output=(1, 1, 64, 64) time=0.017s
+seamcarving.png: QF=101 output=(1, 1, 64, 64) time=0.021s
+splicing.png: QF=101 output=(1, 1, 64, 64) time=0.018s
+```
 
-## N.B. :
-- Considering that there is some differences between the implementation of common functions between Tensorflow/Keras and Pytorch, some particular methods of Pytorch (like batch normalization) are re-implemented here to match perfectly with the original Tensorflow version
+The average execution time is about **0.019 s** per image.
 
-- Noiseprint is an architecture difficult to train without GPU/Multi-CPU. Even in "eval" mode, if you want to use it for detecting forgeries in one image it may take some minutes using only your CPU. It depends on the size of your input image.
+## .NET SDK
 
+The `NoisePrintSdk` folder contains a .NET 8 SDK that allows running the ONNX models directly from C#. The SDK exposes both a programmatic API and a simple command-line application.
 
-## Citation :
+### Build and test
 
-```js
+```bash
+dotnet build NoisePrintSdk/NoisePrintSdk.csproj -c Release
+dotnet test NoisePrintSdk.Tests/NoisePrintSdk.Tests.csproj -c Release
+```
+
+### Command line usage
+
+After building, run the application by specifying an image path:
+
+```bash
+dotnet NoisePrintSdk/bin/Release/net8.0/NoisePrintSdk.dll examples/faceswap.jpeg
+```
+
+Example output on the files in `examples`:
+
+```
+QF=99 shape=(1,1,64,64) time=0.052s
+QF=95 shape=(1,1,64,64) time=0.044s
+QF=101 shape=(1,1,64,64) time=0.040s
+QF=101 shape=(1,1,64,64) time=0.039s
+QF=101 shape=(1,1,64,64) time=0.048s
+```
+
+The average processing time is approximately **0.045 s** per image.
+
+### Library usage
+
+```csharp
+var (qf, shape, secs) = OnnxRunner.Run("my.jpg");
+Console.WriteLine($"QF={qf} shape=({string.Join(',', shape)}) time={secs:F3}s");
+```
+
+The helper `JpegQualityEstimator` relies on the `MetadataExtractor` package to read the JPEG quantization tables and compute the Quality Factor (PNG images are assigned QF 101).
+
+## Dependencies
+
+Install the Python dependencies with:
+
+```bash
+pip install torch torchvision torchaudio onnx scipy onnxruntime pillow numpy
+```
+
+## Citation
+
+```text
 @article{Cozzolino2019_Noiseprint,
   title={Noiseprint: A CNN-Based Camera Model Fingerprint},
   author={D. Cozzolino and L. Verdoliva},
@@ -73,5 +81,5 @@ One may simply download the repo and play with the provided ipython notebook.
   pages={144-159},
   year={2020},
   volume={15}
-} 
+}
 ```
