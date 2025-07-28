@@ -39,7 +39,19 @@ By downloading and/or using any of these files, you implicitly agree to all the 
 **Remarks** : To train Noiseprint you need your own (relevant) datasets.
 
 ## Dependency
-- **Pytorch** >= 1.8.1
+- **Python** >= 3.12
+- **Pytorch** >= 2.7
+
+## ONNX weights
+All pretrained weights are also exported to the ONNX format. If you update the
+weights or add new ones you can regenerate the ONNX files running
+
+```bash
+python convert_to_onnx.py
+```
+
+The resulting models are stored in the `onnx_models/` directory and can be
+loaded with any ONNX compatible runtime.
 
 ## Demo
 One may simply download the repo and play with the provided ipython notebook.

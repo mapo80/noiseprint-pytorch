@@ -10,8 +10,13 @@
 # http://www.grip.unina.it/download/LICENSE_OPEN.txt
 #
 
-from PIL.JpegImagePlugin import convert_dict_qtables
 from PIL import Image
+try:
+    from PIL.JpegImagePlugin import convert_dict_qtables
+except ImportError:  # Pillow>=10 removed convert_dict_qtables
+    def convert_dict_qtables(qtables):
+        """Convert a quantization dictionary to the list format used by older Pillow."""
+        return [qtables[k] for k in sorted(qtables)]
 import numpy as np
 
 
