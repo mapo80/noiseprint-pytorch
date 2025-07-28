@@ -26,4 +26,12 @@ public class EstimatorTests
         int? qf = est.EstimateQuality(Map(path));
         Assert.Null(qf);
     }
+
+    [Fact]
+    public void Jpeg_KnownQuality()
+    {
+        var est = new JpegQualityEstimator();
+        int? qf = est.EstimateQuality(Map("examples/faceswap.jpeg"));
+        Assert.Equal(95, qf);
+    }
 }
